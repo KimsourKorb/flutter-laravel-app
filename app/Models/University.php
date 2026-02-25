@@ -12,33 +12,22 @@ class University extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name',
-        'description',
-        'logo',
-        'cover_image',
-        'location',
-        'type',
-        'ranking',
-        'country',
-        'city',
-        'website',
-        'admission_requirements',
-        'is_active',
-        'established_year',   // ← added
+        'name', 'description', 'logo', 'cover_image', 'images',
+        'location', 'type', 'ranking', 'country', 'city',
+        'website', 'admission_requirements', 'is_active', 'established_year',
     ];
 
     protected $casts = [
         'ranking'          => 'decimal:2',
         'is_active'        => 'boolean',
-        'established_year' => 'integer',  // ← added
+        'established_year' => 'integer',
+        'images'           => 'array',   // stored as JSON, returned as array
     ];
-
-    // ── Relationships ─────────────────────────────────────────────────────────
 
     public function majors(): BelongsToMany
     {
         return $this->belongsToMany(Major::class, 'major_university')
-                    ->with('category')   // ← eager-load category so Flutter gets categoryName
+                    ->with('category')
                     ->withTimestamps();
     }
 
