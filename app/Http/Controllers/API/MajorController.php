@@ -11,20 +11,28 @@ class MajorController extends Controller
     public function index(Request $request)
     {
         $query = Major::with(['category', 'universities'])
-                     ->where('is_active', true);
+            ->where('is_active', true);
 
-        if ($request->has('category_id')) {
+        if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
-        $majors = $query->paginate(15);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
 
-        // Add is_favorite for authenticated users
+        $majors = $query->orderBy('name')->paginate(15);
+
+        // Append is_favorite for authenticated users
         if ($request->user()) {
             $majors->getCollection()->transform(function ($major) use ($request) {
                 $major->is_favorite = $major->favorites()
-                                           ->where('user_id', $request->user()->id)
-                                           ->exists();
+                    ->where('user_id', $request->user()->id)
+                    ->exists();
                 return $major;
             });
         }
@@ -37,15 +45,16 @@ class MajorController extends Controller
         $major = Major::with([
             'category',
             'universities',
-            'careerPaths'
+            'careerPaths',
         ])->findOrFail($id);
 
         if ($request->user()) {
             $major->is_favorite = $major->favorites()
-                                       ->where('user_id', $request->user()->id)
-                                       ->exists();
+                ->where('user_id', $request->user()->id)
+                ->exists();
         }
 
-        return response()->json($major);
+        // Wrapped in 'data' key so Flutter's majorDetailProvider can parse it
+        return response()->json(['data' => $major]);
     }
 }

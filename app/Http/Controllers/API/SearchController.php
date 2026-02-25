@@ -19,22 +19,28 @@ class SearchController extends Controller
             ]);
         }
 
-        $universities = University::where('name', 'like', "%{$query}%")
-                                 ->orWhere('description', 'like', "%{$query}%")
-                                 ->where('is_active', true)
-                                 ->limit(10)
-                                 ->get();
+        $universities = University::where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('description', 'like', "%{$query}%")
+                  ->orWhere('city', 'like', "%{$query}%");
+            })
+            ->with('majors.category')
+            ->limit(10)
+            ->get();
 
-        $majors = Major::where('name', 'like', "%{$query}%")
-                      ->orWhere('description', 'like', "%{$query}%")
-                      ->where('is_active', true)
-                      ->with('category')
-                      ->limit(10)
-                      ->get();
+        $majors = Major::where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('description', 'like', "%{$query}%");
+            })
+            ->with(['category', 'universities'])
+            ->limit(10)
+            ->get();
 
         return response()->json([
             'universities' => $universities,
-            'majors' => $majors,
+            'majors'       => $majors,
         ]);
     }
 }

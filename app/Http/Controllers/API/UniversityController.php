@@ -11,24 +11,31 @@ class UniversityController extends Controller
     public function index(Request $request)
     {
         $query = University::with(['majors.category'])
-                          ->where('is_active', true);
+            ->where('is_active', true);
 
-        if ($request->has('location')) {
+        if ($request->filled('location')) {
             $query->where('location', 'like', '%' . $request->location . '%');
         }
 
-        if ($request->has('type')) {
+        if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        if ($request->has('country')) {
+        if ($request->filled('country')) {
             $query->where('country', $request->country);
         }
 
-        $universities = $query->orderBy('ranking', 'asc')
-                             ->paginate(15);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
 
-        // Add is_favorite for authenticated users
+        $universities = $query->orderBy('ranking', 'asc')->paginate(15);
+
+        // Append is_favorite for authenticated users
         if ($request->user()) {
             $universities->getCollection()->transform(function ($university) use ($request) {
                 $university->is_favorite = $university->isFavoritedBy($request->user()->id);
@@ -43,7 +50,7 @@ class UniversityController extends Controller
     {
         $university = University::with([
             'majors.category',
-            'majors.careerPaths'
+            'majors.careerPaths',
         ])->findOrFail($id);
 
         if ($request->user()) {
